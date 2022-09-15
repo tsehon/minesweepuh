@@ -121,9 +121,9 @@ public class MainActivity extends AppCompatActivity {
         final TextView flag_count = (TextView) findViewById(R.id.num_flags);
         tv.setText("🚩");
 
-        num_flags++;
+        flagged.set(cell_no, true);
+        num_flags--;
         flag_count.setText(String.valueOf(num_flags));
-        flagged.get(findIndexOfCellTextView(tv));
     }
 
 
@@ -132,13 +132,17 @@ public class MainActivity extends AppCompatActivity {
         final TextView flag_count = (TextView) findViewById(R.id.num_flags);
         tv.setText("X");
 
-        num_flags--;
+        flagged.set(cell_no, false);
+        num_flags++;
         flag_count.setText(String.valueOf(Math.max(0, num_flags)));
-        flagged.get(cell_no) = true;
     }
 
-    public void pickGridCell(TextView tv) {
+    public void pickGridCell(TextView tv, int cell_no) {
         tv.setText("X");
+
+        if (flagged.get(cell_no)) {
+            removeFlag(tv, cell_no);
+        }
 
         if (tv.getCurrentTextColor() == Color.GRAY) {
             tv.setTextColor(Color.GREEN);
@@ -165,21 +169,16 @@ public class MainActivity extends AppCompatActivity {
 
     public void onClickGridCell(View view){
         TextView tv = (TextView) view;
-
-        /*
-        int n = findIndexOfCellTextView(tv);
-        int i = n/COLUMN_COUNT;
-        int j = n%COLUMN_COUNT;
-        */
+        int cell_no = findIndexOfCellTextView(tv);
 
         if (mode == Mode.PICK_MODE) {
-            pickGridCell(tv);
+            pickGridCell(tv, cell_no);
         } else { // mode == Mode.FLAG_MODE
-            int cell_no = findIndexOfCellTextView(tv);
-            boolean isFlagged = flagged.get(cell_no); //tv.getText().toString() == "\ud83d\udea9";
+            boolean isFlagged = flagged.get(cell_no);
+
             if (isFlagged) {
                 removeFlag(tv, cell_no);
-            } else {
+            } else if (num_flags > 0) {
                 placeFlag(tv, cell_no);
             }
         }
