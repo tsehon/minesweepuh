@@ -1,7 +1,10 @@
 package com.example.minesweeper;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.os.Handler;
 import android.widget.GridLayout;
 import android.content.res.Resources;
@@ -11,18 +14,36 @@ import android.view.View;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Random;
+
+class GridCell extends androidx.appcompat.widget.AppCompatTextView {
+    int row;
+    int column;
+
+    boolean isFlagged = false;
+    boolean isMine = false;
+    boolean isPicked = false;
+
+    int num_neighboring_mines = 0;
+
+    public GridCell(Context context) {
+        super(context);
+        this.setTextSize(18);
+        this.setTextAlignment(TextView.TEXT_ALIGNMENT_CENTER);
+        this.setTextColor(Color.GREEN);
+        this.setBackgroundColor(Color.GREEN);
+    }
+}
 
 public class MainActivity extends AppCompatActivity {
 
     private static final int ROW_COUNT = 10;
     private static final int COLUMN_COUNT = 8;
+    private static final int NUM_MINES = 4;
 
     // save the TextViews of all cells in an array, so later on,
     // when a TextView is clicked, we know which cell it is
-    private ArrayList<TextView> cell_tvs;
-
-    // tracks flagged cells
-    private ArrayList<Boolean> flagged;
+    private ArrayList<GridCell> cells;
 
     private enum Mode {
         PICK_MODE,
@@ -34,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean timer_running = false;
     private boolean first_click = true;
 
-    private int num_flags = 4;
+    private int num_flags = NUM_MINES;
 
     private int dpToPixel(int dp) {
         float density = Resources.getSystem().getDisplayMetrics().density;
@@ -49,33 +70,30 @@ public class MainActivity extends AppCompatActivity {
         final TextView flag_count = (TextView) findViewById(R.id.num_flags);
         flag_count.setText(String.valueOf(num_flags));
 
-        cell_tvs = new ArrayList<TextView>();
-        flagged = new ArrayList<Boolean>();
+        cells = new ArrayList<>();
 
         GridLayout grid = (GridLayout) findViewById(R.id.gridLayout0);
 
         for (int i = 0; i < ROW_COUNT; i++) {
             for (int j = 0; j < COLUMN_COUNT; j++) {
-                TextView tv = new TextView(this);
-                tv.setHeight(dpToPixel(32));
-                tv.setWidth(dpToPixel(32));
-                tv.setTextSize(18);
-                tv.setTextAlignment(TextView.TEXT_ALIGNMENT_CENTER);
-                tv.setTextColor(Color.GRAY);
-                tv.setBackgroundColor(Color.GRAY);
-                tv.setOnClickListener(this::onClickGridCell);
+                GridCell gc = new GridCell(this);
+                gc.row = i;
+                gc.column = j;
+                gc.setHeight(dpToPixel(32));
+                gc.setWidth(dpToPixel(32));
+                gc.setOnClickListener(this::onClickGridCell);
 
                 GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
                 lp.setMargins(dpToPixel(2), dpToPixel(2), dpToPixel(2), dpToPixel(2));
                 lp.rowSpec = GridLayout.spec(i);
                 lp.columnSpec = GridLayout.spec(j);
 
-                grid.addView(tv, lp);
-
-                cell_tvs.add(tv);
-                flagged.add(false);
+                grid.addView(gc, lp);
+                cells.add(gc);
             }
         }
+
+        setMines();
 
         TextView modeSwitch = (TextView) findViewById(R.id.modeSwitch);
         modeSwitch.setOnClickListener(this::switchMode);
@@ -88,13 +106,43 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void onSaveInstanceState(Bundle savedInstanceState) {
+    public void onSaveInstanceState(@NonNull Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
 
         savedInstanceState.putInt("timer", timer);
         savedInstanceState.putBoolean("timer_running", timer_running);
         savedInstanceState.putBoolean("first_click", first_click);
         savedInstanceState.putInt("num_flags", num_flags);
+    }
+
+    // this method allocates mines to the grid
+    public void setMines() {
+        Random rand = new Random();
+
+        for (int mine = 0; mine < NUM_MINES; mine++) {
+            // get a random GridCell
+            int cell_no = rand.nextInt(80);
+            GridCell gc = cells.get(cell_no);
+
+            // mark GridCell as a mine
+            if (!gc.isMine) {
+                gc.isMine = true;
+            } else {
+                mine--;
+            }
+
+            // update "danger" of neighboring cells
+            for (int i = gc.row-1; i <= gc.row+1; i++) {
+                for (int j = gc.column-1; j <= gc.column+1; j++) {
+                    if (i >= 0 && i < ROW_COUNT && j >= 0 && j < COLUMN_COUNT
+                            && (i != gc.row || j != gc.column)) {
+                        int neighbor_cell_no = (i*COLUMN_COUNT)+j;
+                        GridCell neighbor = cells.get(neighbor_cell_no);
+                        neighbor.num_neighboring_mines++;
+                    }
+                }
+            }
+        }
     }
 
     private void runClock() {
@@ -104,8 +152,7 @@ public class MainActivity extends AppCompatActivity {
         handler.post(new Runnable() {
             @Override
             public void run() {
-                int seconds = timer;
-                String time = String.format("%02d", seconds);
+                @SuppressLint("DefaultLocale") String time = String.format("%02d", timer);
                 timeView.setText(time);
 
                 if (timer_running) {
@@ -117,40 +164,69 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void placeFlag(TextView tv, int cell_no) {
-        final TextView flag_count = (TextView) findViewById(R.id.num_flags);
-        tv.setText("🚩");
+    private void placeFlag(GridCell gc) {
+        if (gc.isPicked)
+            return;
 
-        flagged.set(cell_no, true);
+        gc.setText("🚩");
+        gc.isFlagged = true;
+
+        final TextView flag_count = (TextView) findViewById(R.id.num_flags);
         num_flags--;
         flag_count.setText(String.valueOf(num_flags));
     }
 
+    public void removeFlag(GridCell gc) {
+        gc.isFlagged = false;
+        gc.setText(String.valueOf(gc.num_neighboring_mines));
 
-
-    public void removeFlag(TextView tv, int cell_no) {
         final TextView flag_count = (TextView) findViewById(R.id.num_flags);
-        tv.setText("X");
-
-        flagged.set(cell_no, false);
         num_flags++;
         flag_count.setText(String.valueOf(Math.max(0, num_flags)));
     }
 
-    public void pickGridCell(TextView tv, int cell_no) {
-        tv.setText("X");
+    public void revealCell(GridCell gc) {
+        gc.setBackgroundColor(Color.LTGRAY);
 
-        if (flagged.get(cell_no)) {
-            removeFlag(tv, cell_no);
-        }
-
-        if (tv.getCurrentTextColor() == Color.GRAY) {
-            tv.setTextColor(Color.GREEN);
-            tv.setBackgroundColor(Color.parseColor("lime"));
+        if (gc.isMine) {
+            gc.setText("\uD83D\uDCA3");
+            endGame();
         } else {
-            tv.setTextColor(Color.GRAY);
-            tv.setBackgroundColor(Color.LTGRAY);
+            gc.setText(String.valueOf(gc.num_neighboring_mines));
+
+            if (gc.num_neighboring_mines == 0) {
+                revealNeighbors(gc);
+            }
+
+            gc.setTextColor(Color.GRAY);
+            gc.setBackgroundColor(Color.LTGRAY);
         }
+    }
+
+    public void revealNeighbors(GridCell gc) {
+        for (int i = gc.row-1; i <= gc.row+1; i++) {
+            for (int j = gc.column-1; j <= gc.column+1; j++) {
+                if (i >= 0 && i < ROW_COUNT && j >= 0 && j < COLUMN_COUNT
+                        && (i != gc.row || j != gc.column)) {
+
+                    int neighbor_cell_no = (i*COLUMN_COUNT)+j;
+                    GridCell neighbor = cells.get(neighbor_cell_no);
+
+                    neighbor.setText(String.valueOf(neighbor.num_neighboring_mines));
+                    neighbor.setTextColor(Color.GRAY);
+                    neighbor.setBackgroundColor(Color.LTGRAY);
+                }
+            }
+        }
+    }
+
+    public void pickGridCell(GridCell gc) {
+        if (gc.isPicked || gc.isFlagged) {
+            return;
+        }
+
+        gc.isPicked = true;
+        revealCell(gc);
 
         if (first_click) {
             timer_running = true;
@@ -159,27 +235,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private int findIndexOfCellTextView(TextView tv) {
-        for (int n=0; n<cell_tvs.size(); n++) {
-            if (cell_tvs.get(n) == tv)
-                return n;
-        }
-        return -1;
-    }
-
     public void onClickGridCell(View view){
-        TextView tv = (TextView) view;
-        int cell_no = findIndexOfCellTextView(tv);
+        GridCell gc = (GridCell) view;
 
         if (mode == Mode.PICK_MODE) {
-            pickGridCell(tv, cell_no);
+            pickGridCell(gc);
         } else { // mode == Mode.FLAG_MODE
-            boolean isFlagged = flagged.get(cell_no);
-
-            if (isFlagged) {
-                removeFlag(tv, cell_no);
+            if (gc.isFlagged) {
+                removeFlag(gc);
             } else if (num_flags > 0) {
-                placeFlag(tv, cell_no);
+                placeFlag(gc);
             }
         }
     }
@@ -196,9 +261,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-
-
-
-
+    public void endGame() {
+        // empty
+    }
 }
