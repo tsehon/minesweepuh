@@ -26,7 +26,11 @@
 
         <activity
             android:name=".ResultActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.//" />
+            </intent-filter>
+        </activity>
 
-
-        </application>
+    </application>
 </manifest>

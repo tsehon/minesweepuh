@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Handler;
 import android.widget.GridLayout;
 import android.content.res.Resources;
@@ -41,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int COLUMN_COUNT = 8;
     private static final int NUM_MINES = 4;
 
-    private int cellsToReveal = ROW_COUNT*COLUMN_COUNT-NUM_MINES;
+    private int cellsToReveal = (ROW_COUNT*COLUMN_COUNT)-NUM_MINES;
     private int num_flags = NUM_MINES;
 
     // save the TextViews of all cells in an array, so later on,
@@ -152,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
     private void runClock() {
         final TextView timeView = (TextView) findViewById(R.id.timer);
         final Handler handler = new Handler();
+        timer_running = true;
 
         handler.post(new Runnable() {
             @Override
@@ -194,10 +196,10 @@ public class MainActivity extends AppCompatActivity {
 
         if (gc.isMine) {
             gc.setText("\uD83D\uDCA3");
-            userWon = false;
             gameIsOver = true;
+            userWon = false;
+            timer_running = false;
         } else {
-            cellsToReveal--;
             gc.setText(String.valueOf(gc.num_neighboring_mines));
 
             if (gc.num_neighboring_mines == 0) {
@@ -206,11 +208,14 @@ public class MainActivity extends AppCompatActivity {
 
             gc.setTextColor(Color.GRAY);
             gc.setBackgroundColor(Color.LTGRAY);
-        }
 
-        if (cellsToReveal == 0) {
-            gameIsOver = true;
-            userWon = true;
+            cellsToReveal--;
+            System.out.println(cellsToReveal);
+            if (cellsToReveal <= 0) {
+                gameIsOver = true;
+                userWon = true;
+                timer_running = false;
+            }
         }
     }
 
@@ -240,7 +245,6 @@ public class MainActivity extends AppCompatActivity {
         revealCell(gc);
 
         if (first_click) {
-            timer_running = true;
             runClock();
             first_click = false;
         }
@@ -249,17 +253,17 @@ public class MainActivity extends AppCompatActivity {
     public void onClickGridCell(View view){
         if (gameIsOver) {
             endGame();
-        }
+        } else {
+            GridCell gc = (GridCell) view;
 
-        GridCell gc = (GridCell) view;
-
-        if (mode == Mode.PICK_MODE) {
-            pickGridCell(gc);
-        } else { // mode == Mode.FLAG_MODE
-            if (gc.isFlagged) {
-                removeFlag(gc);
-            } else if (num_flags > 0) {
-                placeFlag(gc);
+            if (mode == Mode.PICK_MODE) {
+                pickGridCell(gc);
+            } else { // mode == Mode.FLAG_MODE
+                if (gc.isFlagged) {
+                    removeFlag(gc);
+                } else if (num_flags > 0) {
+                    placeFlag(gc);
+                }
             }
         }
     }
@@ -278,6 +282,8 @@ public class MainActivity extends AppCompatActivity {
 
     public void endGame() {
         Intent intent = new Intent(this, ResultActivity.class);
-        intent.putExtra("won", userWon);
+        intent.putExtra("USER_WON", (boolean) userWon);
+        intent.putExtra("SECONDS_ELAPSED", (int) timer);
+        startActivity(intent);
     }
 }
