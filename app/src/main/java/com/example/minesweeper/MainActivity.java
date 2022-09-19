@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int COLUMN_COUNT = 8;
     private static final int NUM_MINES = 4;
 
-    private int cellsToReveal = (ROW_COUNT*COLUMN_COUNT)-NUM_MINES;
+    private int numCellsToReveal = (ROW_COUNT*COLUMN_COUNT)-NUM_MINES;
     private int num_flags = NUM_MINES;
 
     // save the TextViews of all cells in an array, so later on,
@@ -192,15 +192,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void revealCell(GridCell gc) {
-        gc.setBackgroundColor(Color.LTGRAY);
-
         if (gc.isMine) {
             gc.setText("\uD83D\uDCA3");
+            gc.setBackgroundColor(Color.RED);
             gameIsOver = true;
             userWon = false;
             timer_running = false;
         } else {
             gc.setText(String.valueOf(gc.num_neighboring_mines));
+            gc.setBackgroundColor(Color.LTGRAY);
 
             if (gc.num_neighboring_mines == 0) {
                 revealNeighbors(gc);
@@ -209,9 +209,10 @@ public class MainActivity extends AppCompatActivity {
             gc.setTextColor(Color.GRAY);
             gc.setBackgroundColor(Color.LTGRAY);
 
-            cellsToReveal--;
-            System.out.println(cellsToReveal);
-            if (cellsToReveal <= 0) {
+
+            numCellsToReveal--;
+            //gc.setText(String.valueOf(numCellsToReveal));
+            if (numCellsToReveal <= 0) {
                 gameIsOver = true;
                 userWon = true;
                 timer_running = false;
@@ -227,10 +228,12 @@ public class MainActivity extends AppCompatActivity {
 
                     int neighbor_cell_no = (i*COLUMN_COUNT)+j;
                     GridCell neighbor = cells.get(neighbor_cell_no);
-
-                    neighbor.setText(String.valueOf(neighbor.num_neighboring_mines));
-                    neighbor.setTextColor(Color.GRAY);
-                    neighbor.setBackgroundColor(Color.LTGRAY);
+                    if (neighbor.getCurrentTextColor() != Color.GRAY) {
+                        numCellsToReveal--;
+                        neighbor.setText(String.valueOf(neighbor.num_neighboring_mines));
+                        neighbor.setTextColor(Color.GRAY);
+                        neighbor.setBackgroundColor(Color.LTGRAY);
+                    }
                 }
             }
         }
