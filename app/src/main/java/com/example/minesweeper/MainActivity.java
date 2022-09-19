@@ -41,6 +41,9 @@ public class MainActivity extends AppCompatActivity {
     private static final int COLUMN_COUNT = 8;
     private static final int NUM_MINES = 4;
 
+    private int cellsToReveal = ROW_COUNT*COLUMN_COUNT-NUM_MINES;
+    private int num_flags = NUM_MINES;
+
     // save the TextViews of all cells in an array, so later on,
     // when a TextView is clicked, we know which cell it is
     private ArrayList<GridCell> cells;
@@ -55,7 +58,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean timer_running = false;
     private boolean first_click = true;
 
-    private int num_flags = NUM_MINES;
+    private boolean gameIsOver = false;
+    private boolean userWon = false;
 
     private int dpToPixel(int dp) {
         float density = Resources.getSystem().getDisplayMetrics().density;
@@ -190,8 +194,10 @@ public class MainActivity extends AppCompatActivity {
 
         if (gc.isMine) {
             gc.setText("\uD83D\uDCA3");
-            endGame();
+            userWon = false;
+            gameIsOver = true;
         } else {
+            cellsToReveal--;
             gc.setText(String.valueOf(gc.num_neighboring_mines));
 
             if (gc.num_neighboring_mines == 0) {
@@ -200,6 +206,11 @@ public class MainActivity extends AppCompatActivity {
 
             gc.setTextColor(Color.GRAY);
             gc.setBackgroundColor(Color.LTGRAY);
+        }
+
+        if (cellsToReveal == 0) {
+            gameIsOver = true;
+            userWon = true;
         }
     }
 
@@ -236,6 +247,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onClickGridCell(View view){
+        if (gameIsOver) {
+            endGame();
+        }
+
         GridCell gc = (GridCell) view;
 
         if (mode == Mode.PICK_MODE) {
@@ -262,6 +277,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void endGame() {
-        // empty
+        if (userWon) {
+
+        } else {
+
+        }
     }
 }
