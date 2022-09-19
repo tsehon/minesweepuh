@@ -277,10 +277,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void endGame() {
-        if (userWon) {
-
-        } else {
-
-        }
+        Intent intent = new Intent(this, ResultActivity.class);
+        intent.putExtra("won", userWon);
     }
 }

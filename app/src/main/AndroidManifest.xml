@@ -13,9 +13,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Minesweeper"
         tools:targetApi="31">
-        <activity
-            android:name=".ResultActivity"
-            android:exported="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -25,6 +23,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-    </application>
 
+        <activity
+            android:name=".ResultActivity"
+
+
+        </application>
 </manifest>
